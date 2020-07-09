@@ -83,14 +83,24 @@ class FontUI(tk.Frame):
     def __init__(self, root, leds):
         tk.Frame.__init__(self, root)
         root.pack_propagate(0)
+
+        # Frames
+        self.toolbar = Frame(self, bd=1, relief=tk.RAISED)
+        toolbar.pack(side=TOP, fill=X)
         self.charFrame = tk.Frame(self, relief=tk.GROOVE)
         self.charFrame.pack_propagate(0)
         self.charFrame.pack(side=tk.LEFT, anchor="n", fill=tk.BOTH, expand=tk.YES)
+        self.controlFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
+        self.controlFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="n", padx=2, pady=2)
+
+        # Toolbar
+        
+
+        # Led Grid
         self.ledsGrid = LedCanvas(self.charFrame, leds, self.on_led_clicked)
         self.ledsGrid.pack(fill=tk.BOTH, expand=tk.YES, padx=2, pady=2)
 
-        self.controlFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
-        self.controlFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="n", padx=2, pady=2)
+        # Letter list with scrollbar
         scrollbar = tk.Scrollbar(self.controlFrame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.letters = {}
@@ -99,16 +109,12 @@ class FontUI(tk.Frame):
         self.lettersListBox.pack(fill=tk.X)
         scrollbar.config(command=self.lettersListBox.yview)
 
+        # Import default latin alphabet in letter list
         for letter in list(string.ascii_uppercase):
             self.addLetter(letter, list())
         self.lettersListBox.select_set(0)
         self.selectedLetter = 0
         self.lettersListBox.bind('<<ListboxSelect>>', self.on_letterlist_select)
-
-        self.buttonsFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
-        self.buttonsFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="s", padx=2, pady=2)
-        generateButton = tk.Button(self.buttonsFrame, height=30, width=30, text="Générer", command=self.generate_font)
-        generateButton.pack(side=tk.BOTTOM)
 
     def addLetter(self, letter, leds):
         self.letters[len(self.letters)] = (letter, leds)
@@ -129,6 +135,7 @@ class FontUI(tk.Frame):
         self.ledsGrid.importSelected(self.letters[self.selectedLetter][1])
 
     def on_led_clicked(self, led_id, led_selected):
+        self.letters[self.selectedLetter] = (self.letters[self.selectedLetter][0], self.ledsGrid.exportSelected())
         self.lettersListBox.delete(self.selectedLetter)
         self.lettersListBox.insert(self.selectedLetter, self.letters[self.selectedLetter][0] + " : " + str(led_selected))
 
