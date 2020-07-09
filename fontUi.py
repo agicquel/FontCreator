@@ -1,5 +1,6 @@
 import tkinter as tk
 import string
+from font_generator import FontGenerator
 
 
 class LedCanvas(tk.Canvas):
@@ -85,59 +86,84 @@ class FontUI(tk.Frame):
         root.pack_propagate(0)
 
         # Frames
-        self.toolbar = Frame(self, bd=1, relief=tk.RAISED)
-        toolbar.pack(side=TOP, fill=X)
-        self.charFrame = tk.Frame(self, relief=tk.GROOVE)
-        self.charFrame.pack_propagate(0)
-        self.charFrame.pack(side=tk.LEFT, anchor="n", fill=tk.BOTH, expand=tk.YES)
-        self.controlFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
-        self.controlFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="n", padx=2, pady=2)
+        charFrame = tk.Frame(self, relief=tk.GROOVE)
+        #pcharFrame.pack_propagate(0)
+        charFrame.pack(side=tk.LEFT, anchor="n", fill=tk.BOTH, expand=tk.YES)
+        controlFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
+        controlFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="n", padx=2, pady=2)
+        buttonsFrame = tk.Frame(controlFrame, bd=1, relief=tk.RAISED, bg="ivory")
+        buttonsFrame.config(height=200)
+        buttonsFrame.grid(row=0, column=0, sticky="NESW")
+        buttonsFrame.grid_rowconfigure(0, weight=1)
+        buttonsFrame.grid_columnconfigure(0, weight=1)
+        buttonsFrame.pack(side=tk.BOTTOM, fill=tk.X, anchor="e", padx=2, pady=2)
 
-        # Toolbar
-        
+        # Buttons
+        #tk.Button(buttonsFrame, width=30, text='Ajouter une lettre').grid()
+        tk.Button(buttonsFrame, width=30, text='Clear la lettre', command=self.reset_selected_letter).grid()
+        tk.Button(buttonsFrame, width=30, text='Tout supprimer', command=self.reset_font).grid()
+        tk.Button(buttonsFrame, width=30, text='Générer la font', command=self.generate_font).grid()
 
         # Led Grid
-        self.ledsGrid = LedCanvas(self.charFrame, leds, self.on_led_clicked)
+        self.ledsGrid = LedCanvas(charFrame, leds, self.on_led_clicked)
         self.ledsGrid.pack(fill=tk.BOTH, expand=tk.YES, padx=2, pady=2)
 
         # Letter list with scrollbar
-        scrollbar = tk.Scrollbar(self.controlFrame)
+        scrollbar = tk.Scrollbar(controlFrame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.letters = {}
-        self.lettersListBox = tk.Listbox(self.controlFrame, height=200)
+        self.lettersListBox = tk.Listbox(controlFrame, height=200)
         self.lettersListBox.config(yscrollcommand=scrollbar.set)
+        self.lettersListBox.bind('<<ListboxSelect>>', self.on_letterlist_select)
         self.lettersListBox.pack(fill=tk.X)
         scrollbar.config(command=self.lettersListBox.yview)
 
         # Import default latin alphabet in letter list
-        for letter in list(string.ascii_uppercase):
-            self.addLetter(letter, list())
-        self.lettersListBox.select_set(0)
         self.selectedLetter = 0
-        self.lettersListBox.bind('<<ListboxSelect>>', self.on_letterlist_select)
+        self.reset_font()
+
 
     def addLetter(self, letter, leds):
         self.letters[len(self.letters)] = (letter, leds)
         self.lettersListBox.insert(len(self.letters), letter + " : " + str(leds))
+
+    def _update_selected_letter_list(self):
+        self.lettersListBox.delete(self.selectedLetter)
+        self.lettersListBox.insert(self.selectedLetter, self.letters[self.selectedLetter][0] + " : " + str(
+            self.letters[self.selectedLetter][1]))
 
     def on_letterlist_select(self, event):
         index = int(event.widget.curselection()[0])
         if index == self.selectedLetter:
             return
         self.letters[self.selectedLetter] = (self.letters[self.selectedLetter][0], self.ledsGrid.exportSelected())
-
-        self.lettersListBox.delete(self.selectedLetter)
-        self.lettersListBox.insert(self.selectedLetter, self.letters[self.selectedLetter][0] + " : " + str(
-            self.letters[self.selectedLetter][1]))
-
+        self._update_selected_letter_list()
         self.selectedLetter = index
         self.ledsGrid.reset()
         self.ledsGrid.importSelected(self.letters[self.selectedLetter][1])
 
     def on_led_clicked(self, led_id, led_selected):
         self.letters[self.selectedLetter] = (self.letters[self.selectedLetter][0], self.ledsGrid.exportSelected())
-        self.lettersListBox.delete(self.selectedLetter)
-        self.lettersListBox.insert(self.selectedLetter, self.letters[self.selectedLetter][0] + " : " + str(led_selected))
+        self._update_selected_letter_list()
+
+    def reset_selected_letter(self):
+        self.letters[self.selectedLetter] = (self.letters[self.selectedLetter][0], [])
+        self._update_selected_letter_list()
+        self.ledsGrid.reset()
+
+    def reset_font(self):
+        self.lettersListBox.delete(0, len(self.letters))
+        self.letters.clear()
+        for letter in list(string.ascii_uppercase):
+            self.addLetter(letter, list())
+        for number in range(10):
+            self.addLetter(str(number), list())
+        self.lettersListBox.select_set(0)
+        self.selectedLetter = 0
+        self.ledsGrid.reset()
 
     def generate_font(self):
-        print("bouton")
+        print("letters : \n" + str(self.letters))
+        fg = FontGenerator(self.letters)
+        fg.generateFontCode("./font.cpp")
+        fg.generateFontHeader("./font.h")
