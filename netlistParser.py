@@ -250,7 +250,8 @@ class NetParse(LispParse):
         for led in self.leds:
             led['px'] = int((led['x'] - min_x) / delta_x)
             led['py'] = int((led['y'] - min_y) / delta_y)
-        self.leds = sorted( self.leds, key = lambda d: (d['py'], d['px'])  )
+        #self.leds = sorted( self.leds, key = lambda d: (d['py'], d['px'])  )
+        self.leds = sorted( self.leds, key = lambda d: d['led'])
         #PP.pprint(self.leds)
         fd = open("netlist.h","w+");
         fd.write(
@@ -319,7 +320,7 @@ class PcbParse(LispParse):
             if not 'descr' in elem or elem['descr'][0:7] != 'LED SMD': continue
             for txt in elem['fp_text']:
                 if txt[0] == 'reference' and txt[1][0] == 'D':
-                    ledId = int(txt[1][1:])-1
+                    ledId = int(txt[1][1:])
                     e_at = elem['at']
                     x = float(e_at[0])
                     y = float(e_at[1])

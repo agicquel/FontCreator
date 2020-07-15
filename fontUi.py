@@ -35,6 +35,7 @@ class LedCanvas(tk.Canvas):
             if led[0] not in self.rect:
                 self.rect[led[0]] = self.create_rectangle(x1, y1, x2, y2, fill="white", outline="black")
                 self.tag_bind(self.rect[led[0]], "<Button-1>", self.rect_clicked)
+                #self.tag_bind(self.rect[led[0]], "<B1-Motion>", self.rect_clicked) # TODO: broken for the moment
             else:
                 self.coords(led[0], x1, y1, x2, y2)
 
@@ -55,7 +56,7 @@ class LedCanvas(tk.Canvas):
 
     def rect_clicked(self, event):
         rect = event.widget.find_withtag('current')[0]
-        led_id = list(self.rect.keys())[list(self.rect.values()).index(rect)]
+        led_id = list(self.rect.values()).index(rect)
         if led_id not in self.selected:
             self.itemconfig(rect, fill="yellow")
             self.selected.append(led_id)
@@ -76,8 +77,7 @@ class LedCanvas(tk.Canvas):
     def importSelected(self, selected):
         self.selected = selected
         for s in selected:
-            rect = self.rect[s]
-            self.itemconfig(rect, fill="yellow")
+            self.itemconfig(s+1, fill="yellow")
 
 
 class FontUI(tk.Frame):
@@ -91,7 +91,7 @@ class FontUI(tk.Frame):
         charFrame.pack(side=tk.LEFT, anchor="n", fill=tk.BOTH, expand=tk.YES)
         controlFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
         controlFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="n", padx=2, pady=2)
-        buttonsFrame = tk.Frame(controlFrame, bd=1, relief=tk.RAISED, bg="ivory")
+        buttonsFrame = tk.Frame(controlFrame, bd=1, relief=tk.RAISED, bg="white")
         buttonsFrame.config(height=200)
         buttonsFrame.grid(row=0, column=0, sticky="NESW")
         buttonsFrame.grid_rowconfigure(0, weight=1)
@@ -112,7 +112,7 @@ class FontUI(tk.Frame):
         scrollbar = tk.Scrollbar(controlFrame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.letters = {}
-        self.lettersListBox = tk.Listbox(controlFrame, height=200)
+        self.lettersListBox = tk.Listbox(controlFrame, height=200, exportselection=False)
         self.lettersListBox.config(yscrollcommand=scrollbar.set)
         self.lettersListBox.bind('<<ListboxSelect>>', self.on_letterlist_select)
         self.lettersListBox.pack(fill=tk.X)
@@ -163,7 +163,6 @@ class FontUI(tk.Frame):
         self.ledsGrid.reset()
 
     def generate_font(self):
-        print("letters : \n" + str(self.letters))
-        fg = FontGenerator(self.letters)
-        fg.generateFontCode("./font.cpp")
-        fg.generateFontHeader("./font.h")
+        fg = FontGenerator(self.letters, headerFile="./font.h", sourceFile="./font.cpp")
+        fg.generateFontSource()
+        fg.generateFontHeader()

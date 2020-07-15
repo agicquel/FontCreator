@@ -1,13 +1,31 @@
 class FontGenerator:
-    def __init__(self, leds):
+    def __init__(self, leds, headerFile, sourceFile):
         self.leds = leds
+        self.headerFile = headerFile
+        self.sourceFile = sourceFile
 
-    def generateFontCode(self, targetFile):
-        pass
+    def generateFontSource(self):
+        f = open(self.sourceFile, "w")
+        f.write("#include \"" + self.headerFile + "\"\n")
+        f.write("""
+namespace hpasteur {
+""")
+        str_size_list = []
+        str_font_list = []
+        for id_list, leds in self.leds.items():
+            f.write("\n\tconst uint8_t PROGMEM Font::font_" + str(leds[0]) + "[" + str(len(leds[1])) + "] = {" + str(leds[1])[1:-1] + "};")
+            str_size_list.append("Font::size_" + str(leds[0]))
+            str_font_list.append("Font::font_" + str(leds[0]))
+        f.write("\n\n\tconst uint8_t * const Font::characters[" + str(len(self.leds)) + "] = {" + (', '.join(str_font_list)) + "};")
+        f.write("\n\tconst size_t    Font::characters_size[" + str(len(self.leds)) + "] = {" + (', '.join(str_size_list)) + "};")
+        f.write("\n}\n")
+        f.close()
 
-    def generateFontHeader(self, targetFile):
-        f = open(targetFile, "w")
-        f.write("""#include <stdlib.h>
+    def generateFontHeader(self):
+        f = open(self.headerFile, "w")
+        f.write("""#ifndef FONT_H
+#define FONT_H
+#include <stdlib.h>
 #include <avr/pgmspace.h>
 typedef unsigned char uint8_t;
 
@@ -16,23 +34,22 @@ namespace hpasteur {
   {
   public:
 
-        """)
+""")
 
         str_size = ""
         str_font = ""
         for id_list, leds in self.leds.items():
-            str_size += "static const size_t size_" + str(leds[0]) + " = " + str(len(leds[1])) + ";\n"
-            str_font += "static const uint8_t font_" + str(leds[0]) + "[" + str(len(leds[1])) + "];\n"
+            str_size += "\tstatic const size_t size_" + str(leds[0]) + " = " + str(len(leds[1])) + ";\n"
+            str_font += "\tstatic const uint8_t font_" + str(leds[0]) + "[" + str(len(leds[1])) + "];\n"
         f.write(str_size)
         f.write("\n")
         f.write(str_font)
         f.write("\n")
 
-        f.write("static const uint8_t * const characters[" + str(len(self.leds)) + "];\n")
-        f.write("static const size_t    characters_size[" + str(len(self.leds)) + "];\n")
+        f.write("\tstatic const uint8_t * const characters[" + str(len(self.leds)) + "];\n")
+        f.write("\tstatic const size_t    characters_size[" + str(len(self.leds)) + "];\n")
 
-        f.write("""
-        uint8_t maxIndex = 0;
+        f.write("""\n\tuint8_t maxIndex = 0;
     
   public:
 
@@ -65,7 +82,7 @@ namespace hpasteur {
     }
   };
 }
-        """)
+""")
 
-        f.write("#endif")
+        f.write("\n#endif")
         f.close()
