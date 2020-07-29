@@ -4,8 +4,6 @@ from fontUi import *
 pcb = PcbParse("./pcb.kicad_pcb")
 leds = pcb.analyse_leds()
 
-print("")
-
 root = tk.Tk()
 root.title("Pasteur Font Creator")
 root.geometry("900x800")

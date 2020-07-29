@@ -1,6 +1,8 @@
 import tkinter as tk
+from tkinter import filedialog
 import string
 from font_generator import FontGenerator
+import json
 
 
 class LedCanvas(tk.Canvas):
@@ -35,7 +37,7 @@ class LedCanvas(tk.Canvas):
             if led[0] not in self.rect:
                 self.rect[led[0]] = self.create_rectangle(x1, y1, x2, y2, fill="white", outline="black")
                 self.tag_bind(self.rect[led[0]], "<Button-1>", self.rect_clicked)
-                #self.tag_bind(self.rect[led[0]], "<B1-Motion>", self.rect_clicked) # TODO: broken for the moment
+                # self.tag_bind(self.rect[led[0]], "<B1-Motion>", self.rect_clicked) # TODO: broken for the moment
             else:
                 self.coords(led[0], x1, y1, x2, y2)
 
@@ -77,7 +79,7 @@ class LedCanvas(tk.Canvas):
     def importSelected(self, selected):
         self.selected = selected
         for s in selected:
-            self.itemconfig(s+1, fill="yellow")
+            self.itemconfig(s + 1, fill="yellow")
 
 
 class FontUI(tk.Frame):
@@ -87,7 +89,7 @@ class FontUI(tk.Frame):
 
         # Frames
         charFrame = tk.Frame(self, relief=tk.GROOVE)
-        #pcharFrame.pack_propagate(0)
+        # pcharFrame.pack_propagate(0)
         charFrame.pack(side=tk.LEFT, anchor="n", fill=tk.BOTH, expand=tk.YES)
         controlFrame = tk.Frame(self, relief=tk.GROOVE, width=50, bg="white")
         controlFrame.pack(fill=tk.BOTH, expand=tk.YES, side=tk.RIGHT, anchor="n", padx=2, pady=2)
@@ -99,9 +101,11 @@ class FontUI(tk.Frame):
         buttonsFrame.pack(side=tk.BOTTOM, fill=tk.X, anchor="e", padx=2, pady=2)
 
         # Buttons
-        #tk.Button(buttonsFrame, width=30, text='Ajouter une lettre').grid()
+        # tk.Button(buttonsFrame, width=30, text='Ajouter une lettre').grid()
         tk.Button(buttonsFrame, width=30, text='Clear la lettre', command=self.reset_selected_letter).grid()
         tk.Button(buttonsFrame, width=30, text='Tout supprimer', command=self.reset_font).grid()
+        tk.Button(buttonsFrame, width=30, text='Import', command=self.import_font).grid()
+        tk.Button(buttonsFrame, width=30, text='Export', command=self.export_font).grid()
         tk.Button(buttonsFrame, width=30, text='Générer la font', command=self.generate_font).grid()
 
         # Led Grid
@@ -121,7 +125,6 @@ class FontUI(tk.Frame):
         # Import default latin alphabet in letter list
         self.selectedLetter = 0
         self.reset_font()
-
 
     def addLetter(self, letter, leds):
         self.letters[len(self.letters)] = (letter, leds)
@@ -163,6 +166,30 @@ class FontUI(tk.Frame):
         self.ledsGrid.reset()
 
     def generate_font(self):
-        fg = FontGenerator(self.letters, headerFile="./font.h", sourceFile="./font.cpp")
+        folder_selected = filedialog.askdirectory(initialdir="./", title="Dossier de destination")
+        print(folder_selected)
+        fg = FontGenerator(self.letters, headerFile=folder_selected + "/font.h", sourceFile=folder_selected + "/font.cpp")
         fg.generateFontSource()
         fg.generateFontHeader()
+
+    def import_font(self):
+        file_name = filedialog.askopenfilename(initialdir="./", title="Selection fichier",
+                                               filetypes=(("JSON", "*.json"), ("Tout", "*.*")))
+        self.reset_font()
+        self.letters.clear()
+        with open(file_name, 'r') as handle:
+            self.letters = json.load(handle)
+        self.letters = {int(k):v for k,v in self.letters.items()}
+        print(self.letters.keys())
+        print(self.letters)
+        self.selectedLetter = 0
+        self.ledsGrid.importSelected(self.letters[self.selectedLetter][1])
+        self.lettersListBox.delete(0, tk.END)
+        for key in self.letters:
+            self.lettersListBox.insert(key, self.letters[key][0] + " : " + str(self.letters[key][1]))
+
+    def export_font(self):
+        file_name = filedialog.asksaveasfilename(initialdir="./", title="Selection fichier",
+                                                 filetypes=(("JSON", "*.json"), ("Tout", "*.*")))
+        with open(file_name, 'w') as handle:
+            json.dump(self.letters, handle)
