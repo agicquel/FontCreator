@@ -167,8 +167,8 @@ class FontUI(tk.Frame):
 
     def generate_font(self):
         folder_selected = filedialog.askdirectory(initialdir="./", title="Dossier de destination")
-        print(folder_selected)
-        fg = FontGenerator(self.letters, headerFile=folder_selected + "/font.h", sourceFile=folder_selected + "/font.cpp")
+        fg = FontGenerator(self.letters, headerFile=folder_selected + "/font.h",
+                           sourceFile=folder_selected + "/font.cpp")
         fg.generateFontSource()
         fg.generateFontHeader()
 
@@ -179,9 +179,7 @@ class FontUI(tk.Frame):
         self.letters.clear()
         with open(file_name, 'r') as handle:
             self.letters = json.load(handle)
-        self.letters = {int(k):v for k,v in self.letters.items()}
-        print(self.letters.keys())
-        print(self.letters)
+        self.letters = {int(k): v for k, v in self.letters.items()}
         self.selectedLetter = 0
         self.ledsGrid.importSelected(self.letters[self.selectedLetter][1])
         self.lettersListBox.delete(0, tk.END)

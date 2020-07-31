@@ -1,8 +1,17 @@
+from netlistParser import *
+import pyinstaller_path
+
+
 class FontGenerator:
     def __init__(self, leds, headerFile, sourceFile):
         self.leds = leds
         self.headerFile = headerFile
         self.sourceFile = sourceFile
+        self.nl = NetParse(pyinstaller_path.resource_path("./pcb/pcb.net"))
+        self.nl.analyse()
+        self.sorted_an_ca = sorted(self.nl.leds, key=lambda d: (d['an'], d['ca']))
+        self.sorted_ca_an = sorted(self.nl.leds, key=lambda d: (d['ca'], d['an']))
+        self.optimize()
 
     def generateFontSource(self):
         f = open(self.sourceFile, "w")
@@ -13,11 +22,14 @@ namespace hpasteur {
         str_size_list = []
         str_font_list = []
         for id_list, leds in self.leds.items():
-            f.write("\n\tconst uint8_t PROGMEM Font::font_" + str(leds[0]) + "[" + str(len(leds[1])) + "] = {" + str(leds[1])[1:-1] + "};")
+            f.write("\n\tconst uint8_t PROGMEM Font::font_" + str(leds[0]) + "[" + str(len(leds[1])) + "] = {" + str(
+                leds[1])[1:-1] + "};")
             str_size_list.append("Font::size_" + str(leds[0]))
             str_font_list.append("Font::font_" + str(leds[0]))
-        f.write("\n\n\tconst uint8_t * const Font::characters[" + str(len(self.leds)) + "] = {" + (', '.join(str_font_list)) + "};")
-        f.write("\n\tconst size_t    Font::characters_size[" + str(len(self.leds)) + "] = {" + (', '.join(str_size_list)) + "};")
+        f.write("\n\n\tconst uint8_t * const Font::characters[" + str(len(self.leds)) + "] = {" + (
+            ', '.join(str_font_list)) + "};")
+        f.write("\n\tconst size_t    Font::characters_size[" + str(len(self.leds)) + "] = {" + (
+            ', '.join(str_size_list)) + "};")
         f.write("\n}\n")
         f.close()
 
@@ -86,3 +98,50 @@ namespace hpasteur {
 
         f.write("\n#endif")
         f.close()
+
+    def _find_an(self, led_id):
+        return list(filter(lambda l: l['led'] == led_id, self.nl.leds))[0]['an']
+
+    def _find_ca(self, led_id):
+        return list(filter(lambda l: l['led'] == led_id, self.nl.leds))[0]['ca']
+
+    def _count_swap(self, led_list):
+        if len(led_list) == 0:
+            return 0
+        counter = 2
+        last_an = self._find_an(led_list[0])
+        last_ca = self._find_ca(led_list[0])
+        for l in led_list:
+            led_an = self._find_an(l + 1)
+            led_ca = self._find_an(l + 1)
+            if led_an != last_an:
+                counter += 1
+                last_an = led_an
+            if led_ca != last_ca:
+                counter += 1
+                last_ca = led_ca
+        return counter
+
+    def optimize(self):
+        # print("before opti")
+        # print("\n")
+        # for id_list, leds in self.leds.items():
+        #     print(str(id_list) + " : " + str(self._count_swap(leds[1])))
+        for id_list, leds in self.leds.items():
+            new_leds_list_1 = []
+            new_leds_list_2 = []
+            for l in self.sorted_an_ca:
+                if l['led'] in leds[1]:
+                    new_leds_list_1.append(l['led'])
+            for l in self.sorted_ca_an:
+                if l['led'] in leds[1]:
+                    new_leds_list_2.append(l['led'])
+            if self._count_swap(new_leds_list_1) < self._count_swap(new_leds_list_2):
+                self.leds[id_list] = (self.leds[id_list][0], new_leds_list_1)
+            else:
+                self.leds[id_list] = (self.leds[id_list][0], new_leds_list_2)
+        # print("\n")
+        # print("after opti")
+        # print("\n")
+        # for id_list, leds in self.leds.items():
+        #     print(str(id_list) + " : " + str(self._count_swap(leds[1])))
